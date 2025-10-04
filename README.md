@@ -1,6 +1,5 @@
 # BEES-IN-SPACE
 
-
 * **Instalar Git**
 
   * Jetson / Linux:
@@ -16,7 +15,6 @@
   git config --global user.email "tuemail@ejemplo.com"
   ```
 
-
 # Añadir todos los cambios
 
 git add .
@@ -28,3 +26,13 @@ git commit -m "Descripción del cambio"
 # Subir los cambios a GitHub
 
 git push origin main
+
+# Bibliotecas
+
+
+
+[Instalación de Python  |  Google Earth Engine  |  Google for Developers](https://developers.google.com/earth-engine/guides/python_install?hl=es-419)
+
+```
+pip install earthengine-api --upgrade
+```
