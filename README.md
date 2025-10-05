@@ -33,6 +33,39 @@ git push origin main
 
 [Instalación de Python  |  Google Earth Engine  |  Google for Developers](https://developers.google.com/earth-engine/guides/python_install?hl=es-419)
 
+
 ```
+python -m venv 
+.venv.\.venv\Scripts\activate
+#instalar librerias
 pip install earthengine-api --upgrade
+```
+
+Autenticar earthengine
+
+```
+earthengine authenticate --force
+```
+
+```
+earthengine set_project
+```
+
+```
+pip install -q --upgrade geemap
+```
+
+```
+pip install -q --upgrade altair
+```
+
+```
+pip install geopandas h3 pandas numpy matplotlib rasterio earthengine-api flask
+```
+
+En codigo ahora poner
+
+```
+ee.Authenticate()
+ee.Initialize(project='charged-kiln-414822')
 ```
