@@ -38,6 +38,31 @@
 <body>
 
     <div id="landing-page" class="landing-page">
+        <div style="max-width: 800px; text-align: center; z-index: 10; padding: 20px; background-color: rgba(0, 0, 0, 0.7); border-radius: 15px;">
+        <h1 style="color: #ffc300; font-size: 2.8em; margin-bottom: 5px;">🐝 Bees in Space 🛰️</h1>
+        <p style="font-size: 1.2em; line-height: 1.6;">
+            **Misión:** Plataforma para la conservación de polinizadores en microzonas, usando datos satelitales de la NASA.
+        </p>
+
+        <details style="margin-top: 15px; text-align: left; background-color: rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 8px;">
+            <summary style="font-weight: bold; cursor: pointer; color: #ffc300;">Detalles, Colaboradores y Bibliografía (Haga clic para expandir)</summary>
+            
+            <h5 style="margin-top: 10px;">El Patrón de la Colmena: JWST y H3</h5>
+            <p style="font-size: 0.9em;">La visualización hexagonal no es solo estética, sino un sistema de **cuantificación geoespacial (H3)** que une la forma de una colmena con la ingeniería de los espejos del Telescopio James Webb.</p>
+
+            <h5 style="margin-top: 10px;">Metodología y Alcance</h5>
+            <ul>
+                <li>**Alertas Verificables:** Generamos un Índice de Riesgo (IA) a partir de NDVI, LST, ET y cambios de uso de suelo.</li>
+                <li>**Democratización:** Interfaz simple para agricultores y data cruda para expertos.</li>
+                <li>**Colaboradores Clave:** [Tu Equipo / ONG / Institución]</li>
+                <li>**Fuentes de Datos (API):** NASA MODIS, Landsat/Sentinel, ECOSTRESS (vía Google Earth Engine).</li>
+            </ul>
+        </details>
+        
+        <button onclick="enterPlatform()" style="margin-top: 25px;">
+            Entrar a la Plataforma de Monitoreo
+        </button>
+    </div>
         <div class="jwst-grid">
             <script>
                 // Generar un patrón hexagonal simple para el fondo

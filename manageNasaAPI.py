@@ -22,7 +22,7 @@ def get_h3_indices_for_bbox(min_lat, max_lat, min_lon, max_lon, resolution):
     # Es una aproximación, pero funciona bien para iniciar.
     for lat in range(int(min_lat*100), int(max_lat*100)):
         for lon in range(int(min_lon*100), int(max_lon*100)):
-            h3_id = h3.geo_to_h3(lat / 100.0, lon / 100.0, resolution)
+            h3_id = h3.latlng_to_cell(lat / 100.0, lon / 100.0, resolution)
             hexagonos_ids.add(h3_id)
     return list(hexagonos_ids)
 
