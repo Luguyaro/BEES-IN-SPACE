@@ -1,13 +1,12 @@
-// platform.js (SIMULACIÓN en CLIENTE - Corregida)
+// platform.js (MODIFICADO para Default EN y sin control de idioma repetido)
 let map;
 let hexLayer;
 
 // Colores para el mapa
 const RISK_COLORS = ["#28a745", "#ffc107", "#dc3545"];
-const RISK_LABELS = ["Verde (Saludable)", "Amarillo (Moderado)", "Rojo (Crítico)"];
 
-// Variable global para el idioma
-let currentLanguage = 'es'; 
+// Se inicializa en 'en' (English) por defecto, para reflejar el cambio en index.html
+let currentLanguage = 'en'; 
 
 // Función de entrada a la plataforma (sin cambios)
 function enterPlatform() {
@@ -20,6 +19,7 @@ function enterPlatform() {
 }
 
 function initMap() {
+    // Map initialization logic (unchanged)
     map = L.map('map').setView([-12.5, -70.5], 9); 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
@@ -51,24 +51,48 @@ function initMap() {
         simulateHexData(center.lat, center.lng); 
     });
     
-    // Añadir el panel de control de Variables y el selector de Idioma
+    // Se inserta el control de Variables
     addVariableControl();
-    addLanguageControl();
 }
 
+// Función auxiliar para obtener las etiquetas de riesgo en el idioma actual
+function getRiskLabel(index) {
+    if (currentLanguage === 'es') {
+        const labels = ["Verde (Saludable)", "Amarillo (Moderado)", "Rojo (Crítico)"];
+        return labels[index];
+    }
+    // Default: English
+    const labels = ["Green (Healthy)", "Yellow (Moderate)", "Red (Critical)"];
+    return labels[index];
+}
+
+
+// MODIFICADA: Ahora usa currentLanguage para traducir el widget al inicio o al cambiar idioma
 function addVariableControl() {
     const panel = document.getElementById('controls-panel');
-    const variableWidget = document.createElement('div');
+    // Si ya existe, lo quitamos para recargar con el nuevo idioma
+    let variableWidget = document.getElementById('variable-widget');
+    if (variableWidget) variableWidget.remove();
+    
+    variableWidget = document.createElement('div');
     variableWidget.className = 'widget';
-    variableWidget.id = 'variable-widget'; // Asignar un ID para orden
+    variableWidget.id = 'variable-widget'; 
+    
+    const title = currentLanguage === 'es' ? '2. Análisis por Variable (Modo Experto)' : '2. Variable Analysis (Expert Mode)';
+    const text = currentLanguage === 'es' ? 'Visualiza el valor directo de cada variable satelital:' : 'Visualize the direct value of each satellite variable:';
+    const riskOption = currentLanguage === 'es' ? 'Índice de Riesgo (MLP)' : 'Risk Index (MLP)';
+    const ndviOption = currentLanguage === 'es' ? 'NDVI (Salud Vegetal)' : 'NDVI (Vegetation Health)';
+    const lstOption = currentLanguage === 'es' ? 'LST (Temperatura Superficial)' : 'LST (Surface Temperature)';
+    const smOption = currentLanguage === 'es' ? 'Humedad del Suelo (SMAP)' : 'Soil Moisture (SMAP)';
+
     variableWidget.innerHTML = `
-        <h4>2. Análisis por Variable (Modo Experto)</h4>
-        <p>Visualiza el valor directo de cada variable satelital:</p>
+        <h4>${title}</h4>
+        <p>${text}</p>
         <select id="variable-selector" onchange="styleHexLayerByVariable(this.value)">
-            <option value="risk" selected>Índice de Riesgo (MLP)</option>
-            <option value="ndvi">NDVI (Salud Vegetal)</option>
-            <option value="lst">LST (Temperatura Superficial)</option>
-            <option value="soil_moisture">Humedad del Suelo (SMAP)</option>
+            <option value="risk" selected>${riskOption}</option>
+            <option value="ndvi">${ndviOption}</option>
+            <option value="lst">${lstOption}</option>
+            <option value="soil_moisture">${smOption}</option>
         </select>
     `;
     // Insertar después del primer widget (Índice de Riesgo)
@@ -80,131 +104,112 @@ function addVariableControl() {
     }
 }
 
-// NUEVA FUNCIÓN: Control de Idioma
-function addLanguageControl() {
-    const panel = document.getElementById('controls-panel');
-    const languageWidget = document.createElement('div');
-    languageWidget.className = 'widget';
-    languageWidget.id = 'language-widget';
-    languageWidget.innerHTML = `
-        <h4>⚙️ Configuración</h4>
-        <p>Cambiar idioma de la plataforma:</p>
-        <select id="language-selector" onchange="changeLanguage(this.value)">
-            <option value="es" selected>Español (ES)</option>
-            <option value="en">English (EN)</option>
-        </select>
-    `;
-    // Insertar al final del panel de control
-    panel.appendChild(languageWidget);
-}
 
-function changeLanguage(lang) {
-    currentLanguage = lang;
-    alert(lang === 'es' ? "Idioma cambiado a Español." : "Language switched to English.");
-    // Esto activa la traducción del contenido de la Landing Page
-    showSection(document.querySelector('#section-content').dataset.current || 'plataforma');
-}
-
-
-// Función de SIMULACIÓN: Genera H3 y asigna colores aleatorios
+// Función de SIMULACIÓN: Genera H3 y asigna colores aleatorios (CORREGIDA)
 function simulateHexData(lat, lon) {
-    if (hexLayer) map.removeLayer(hexLayer);
-    
-    document.getElementById('controls-panel').style.opacity = 0.5;
+    if (hexLayer) map.removeLayer(hexLayer);
+    
+    document.getElementById('controls-panel').style.opacity = 0.5;
 
-    try {
-        // Generar celdas H3 (nivel 8) alrededor del punto central
-        const resolution = 8;
-        const centerH3 = h3.latLngToCell(lat, lon, resolution);
-        const hexes = h3.kRing(centerH3, 8); // Aumenté el radio a 8 para una mejor visualización de área.
+    try {
+        // Generar celdas H3 (nivel 8)
+        const resolution = 8;
+        const centerH3 = h3.latLngToCell(lat, lon, resolution);
+        const hexes = h3.kRing(centerH3, 8); 
 
-        const simulatedData = [];
+        const simulatedData = [];
         let numRojo = 0;
-        
-        for (const h of hexes) {
-            // 1. Simulación de Datos Ambientales Ficticios
-            const ndvi = (Math.random() * 0.4 + 0.5); // 0.5 a 0.9 (Alto)
-            const lst = (Math.random() * 10 + 295); // 295K a 305K
-            const sm = (Math.random() * 0.3 + 0.2); // 0.2 a 0.5
+        
+        for (const h of hexes) {
+            // 1. Simulación de Datos Ambientales Ficticios
+            const ndvi = (Math.random() * 0.4 + 0.5); // 0.5 a 0.9 (Alto)
+            const lst = (Math.random() * 10 + 295); // 295K a 305K
+            const sm = (Math.random() * 0.3 + 0.2); // 0.2 a 0.5
 
-            // 2. Simulación de Etiqueta (40% Verde, 35% Amarillo, 25% Rojo)
+            // 2. Simulación de Etiqueta (40% Verde, 35% Amarillo, 25% Rojo)
             let label = 0; // Por defecto Verde
             const r = Math.random();
-            if (r > 0.6) { // 40% de probabilidad
+            if (r > 0.6) { 
                 label = 1; // Amarillo
-            } else if (r < 0.25 && numRojo < 15) { // 25% de probabilidad, limitado a 15 celdas
+            } else if (r < 0.25 && numRojo < 15) { 
                 label = 2; // Rojo
                 numRojo++;
             }
-            
-            const color = RISK_COLORS[label]; 
-            
-            // 3. Conversión a GeoJSON para Leaflet
-            const boundary = h3.cellToBoundary(h); 
-            // Importante: Leaflet usa [lon, lat]. h3.cellToBoundary devuelve [lat, lon]
-            const geojson_coords = [boundary.map(p => [p[1], p[0]])]; 
-            
-            simulatedData.push({
-                type: "Feature",
-                geometry: { type: "Polygon", coordinates: geojson_coords },
-                properties: {
-                    h3_id: h,
-                    features: {
-                        ndvi: ndvi,
-                        lst: lst,
-                        soil_moisture: sm
-                    },
-                    label: label, // Índice de riesgo (0=Verde, 1=Amarillo, 2=Rojo)
-                    color: color
-                }
-            });
-        }
+            
+            const color = RISK_COLORS[label]; 
+            
+            // 3. Conversión a GeoJSON para Leaflet
+            const boundary = h3.cellToBoundary(h); 
+            // Leaflet usa [lon, lat], h3.cellToBoundary devuelve [lat, lon]
+            const geojson_coords = [boundary.map(p => [p[1], p[0]])]; 
+            
+            simulatedData.push({
+                type: "Feature",
+                geometry: { type: "Polygon", coordinates: geojson_coords },
+                properties: {
+                    h3_id: h,
+                    features: {
+                        ndvi: ndvi,
+                        lst: lst,
+                        soil_moisture: sm
+                    },
+                    label: label, 
+                    color: color
+                }
+            });
+        }
 
-        // 4. Renderización de la capa GeoJSON
-        // Aquí se corrige un posible problema de renderizado. 
-        // Asegúrate que 'simulatedData' sea un array de Features.
-        hexLayer = L.geoJSON(simulatedData, {
-            style: f => ({
-                fillColor: f.properties.color,
-                color: "#fff",
-                weight: 1,
-                fillOpacity: 0.6
-            }),
-            onEachFeature: (f, layer) => {
-                const info = f.properties;
-                const ndvi_val = info.features.ndvi || 'N/A';
-                const lst_val = info.features.lst || 'N/A';
-                const sm_val = info.features.soil_moisture || 'N/A';
-                
-                layer.on('click', (e) => {
+        // 4. Renderización de la capa GeoJSON
+        hexLayer = L.geoJSON(simulatedData, {
+            style: f => ({
+                fillColor: f.properties.color,
+                color: "#fff",
+                weight: 1,
+                fillOpacity: 0.6
+            }),
+            onEachFeature: (f, layer) => {
+                const info = f.properties;
+                const ndvi_val = info.features.ndvi || 'N/A';
+                const lst_val = info.features.lst || 'N/A';
+                const sm_val = info.features.soil_moisture || 'N/A';
+                
+                layer.on('click', (e) => {
                     layer.openPopup();
                     L.DomEvent.stopPropagation(e);
                 });
-                
-                layer.bindPopup(`
-                    <b>Celda H3 ID:</b> ${info.h3_id}<br>
-                    ---<br>
-                    <b>NDVI:</b> ${typeof ndvi_val === 'number' ? ndvi_val.toFixed(3) : ndvi_val}<br>
-                    <b>LST:</b> ${typeof lst_val === 'number' ? lst_val.toFixed(2) : lst_val} K<br>
-                    <b>Humedad:</b> ${typeof sm_val === 'number' ? sm_val.toFixed(3) : sm_val}<br>
-                    ---<br>
-                    <b style="color:${info.color}">Riesgo MLP: ${RISK_LABELS[info.label]}</b>
-                    <br><button onclick="showValidationPopup('${info.h3_id}', L.latLng(${layer.getBounds().getCenter().lat}, ${layer.getBounds().getCenter().lng}))" style="margin-top: 5px;">Validación Local</button>
-                `);
-            }
-        }).addTo(map);
+                
+                // PopUp bilingüe
+                const title_popup = currentLanguage === 'es' ? 'Riesgo MLP:' : 'MLP Risk:';
+                const button_popup = currentLanguage === 'es' ? 'Validación Local' : 'Local Validation';
+                const ndvi_label = currentLanguage === 'es' ? 'NDVI:' : 'NDVI:';
+                const lst_label = currentLanguage === 'es' ? 'LST:' : 'LST:';
+                const sm_label = currentLanguage === 'es' ? 'Humedad:' : 'Moisture:';
+                const h3_label = currentLanguage === 'es' ? 'Celda H3 ID:' : 'H3 Cell ID:';
+                
+                layer.bindPopup(`
+                    <b>${h3_label}</b> ${info.h3_id}<br>
+                    ---<br>
+                    <b>${ndvi_label}</b> ${typeof ndvi_val === 'number' ? ndvi_val.toFixed(3) : ndvi_val}<br>
+                    <b>${lst_label}</b> ${typeof lst_val === 'number' ? lst_val.toFixed(2) : lst_val} K<br>
+                    <b>${sm_label}</b> ${typeof sm_val === 'number' ? sm_val.toFixed(3) : sm_val}<br>
+                    ---<br>
+                    <b style="color:${info.color}">${title_popup} ${getRiskLabel(info.label)}</b>
+                    <br><button onclick="showValidationPopup('${info.h3_id}', L.latLng(${layer.getBounds().getCenter().lat}, ${layer.getBounds().getCenter().lng}))" style="margin-top: 5px;">${button_popup}</button>
+                `);
+            }
+        }).addTo(map);
 
-        // Ajustar el mapa al área de los hexágonos
-        if (hexLayer.getBounds().isValid()) {
-            map.fitBounds(hexLayer.getBounds());
-        }
-        
-    } catch (e) {
-        alert("Error crítico en la simulación geométrica (H3/Leaflet).");
-        console.error("Simulation error:", e);
-    }
-    
-    document.getElementById('controls-panel').style.opacity = 1;
+        // Ajustar el mapa al área de los hexágonos
+        if (hexLayer.getBounds().isValid()) {
+            map.fitBounds(hexLayer.getBounds());
+        }
+        
+    } catch (e) {
+        alert(currentLanguage === 'es' ? "Error crítico en la simulación geométrica (H3/Leaflet)." : "Critical error in geometric simulation (H3/Leaflet).");
+        console.error("Simulation error:", e);
+    }
+    
+    document.getElementById('controls-panel').style.opacity = 1;
 }
 
 // --- Función para Análisis por Variable (Modo Experto) ---
@@ -217,15 +222,15 @@ function styleHexLayerByVariable(variable) {
         value = parseFloat(value); 
 
         switch (variable) {
-            case 'ndvi': // Verde (Alto NDVI) a Amarillo (Bajo NDVI)
+            case 'ndvi': 
                 if (value > 0.7) return '#10a500';
                 if (value > 0.5) return '#74c67a';
                 return '#ffc107';
-            case 'lst': // Azul (Baja Temp) a Rojo (Alta Temp)
+            case 'lst': 
                 if (value < 298) return '#00bfff';
                 if (value < 305) return '#ffc107';
                 return '#dc3545';
-            case 'soil_moisture': // Azul oscuro (Alta Humedad) a Naranja (Baja Humedad)
+            case 'soil_moisture': 
                 if (value > 0.4) return '#007bff';
                 if (value > 0.2) return '#87cefa';
                 return '#f58230';
@@ -256,10 +261,10 @@ function styleHexLayerByVariable(variable) {
     });
 }
 
-// --- Sección 3: Validación Comunitaria ---
+// --- Sección 3: Validación Comunitaria (Ahora bilingüe) ---
 function showValidationPopup(h3_id, center) {
-    // Lógica sin cambios
-    const celdaInfo = h3_id ? `Celda: <b>${h3_id}</b>` : "Ubicación del mapa";
+    const celdaInfo = h3_id ? (currentLanguage === 'es' ? `Celda: <b>${h3_id}</b>` : `Cell: <b>${h3_id}</b>`) : (currentLanguage === 'es' ? "Ubicación del mapa" : "Map location");
+    
     const content = `
         <div style="font-family: Arial, sans-serif;">
             <h4>${currentLanguage === 'es' ? 'Validación Local' : 'Local Validation'} para ${celdaInfo}</h4>
