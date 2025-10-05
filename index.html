@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bees in Space 🛰️</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+
+<style>
+/* Estilos generales */
+body, html {
+  margin: 0; padding: 0; height: 100%;
+  font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f0f2f5;
+}
+#main-container { display: none; height: 100%; flex-direction: row; }
+#map-container { flex-grow: 1; height: 100%; }
+#controls-panel {
+  width: 380px; padding: 25px; background: #fff;
+  box-shadow: 2px 0 15px rgba(0,0,0,0.1); overflow-y: auto;
+}
+.widget { margin-bottom: 25px; padding: 18px; border-radius: 10px;
+  background: #f9f9f9; border-left: 5px solid #ffc300; }
+.widget h4 { margin-top: 0; color: #333; }
+
+/* Estilos Landing Page */
+.landing-page {
+  position: fixed; top:0; left:0; width:100%; height:100%;
+  background:#0f1626; color:white; display:flex; flex-direction:column;
+  justify-content:center; align-items:center; z-index:1000;
+  transition:opacity 0.5s ease-out;
+  overflow-y: auto;
+}
+
+/* CORRECCIÓN: Navegación Fija */
+nav { 
+  position: fixed;
+  top: 0; 
+  width: 100%; 
+  display: flex; 
+  justify-content: center; 
+  gap: 20px; 
+  padding: 15px; 
+  z-index: 1001; 
+  background: rgba(15, 22, 38, 0.95);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+nav button {
+  background-color: transparent; color: #ffc300; border: 1px solid #ffc300;
+  border-radius: 8px; padding: 8px 14px; font-weight: bold; cursor: pointer;
+  transition: 0.3s;
+}
+nav button:hover { background-color: #ffc300; color: #111; }
+
+button { padding: 10px 15px; background-color: #ffc300; color: #111; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+button:hover { background-color: #e6b200; }
+
+/* CORRECCIÓN: Contenido con Scroll Interno */
+#section-content {
+  max-width:800px;
+  text-align:center;
+  z-index:10;
+  padding:20px;
+  background-color:rgba(0,0,0,0.7);
+  border-radius:15px;
+  margin-top: 80px; /* Separación del nav fijo */
+  max-height: 80vh; /* Altura máxima visible */
+  overflow-y: auto; /* Permite el scroll solo en este div */
+}
+#section-content::-webkit-scrollbar { width: 8px; }
+#section-content::-webkit-scrollbar-thumb { background: #ffc300; border-radius: 10px; }
+#section-content::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
+
+/* Estilos de Leyenda y Grilla Hexagonal */
+.legend-item { display: flex; align-items: center; margin-bottom: 8px; font-size: 0.9em; }
+.risk-color-box { width: 18px; height: 18px; display: inline-block; border-radius: 3px; margin-right: 10px; }
+.jwst-grid { position: absolute; width: 100%; height: 100%; overflow: hidden; opacity: 0.15; }
+.hex-unit { width: 50px; height: 50px; background-color: #ffc300; clip-path: polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%); margin: 5px; float: left; animation: pulse 3s infinite alternate; }
+@keyframes pulse { 0% { opacity: 0.1; transform: scale(0.9); } 100% { opacity: 0.3; transform: scale(1.1); } }
+
+/* Estilos de Tablas para Contenido */
+.content-table { width: 100%; border-collapse: collapse; margin-top: 15px; background-color: white; }
+.content-table th, .content-table td { border: 1px solid #444; padding: 10px; text-align: left; font-size: 0.9em; color: #333; }
+.content-table th { background-color: #ffc300; color: #111; font-weight: bold; }
+/* Asegurar legibilidad del texto dentro del contenido */
+#section-content p, #section-content ul, #section-content h3, #section-content h2, #section-content h1 { color: white; }
+#section-content p, #section-content ul, #section-content h3 { text-align: left; }
+#section-content h2, #section-content h1 { text-align: center; }
+
+</style>
+</head>
+<body>
+
+<div id="landing-page" class="landing-page">
+  <nav>
+    <button onclick="showSection('plataforma')">Plataforma</button>
+    <button onclick="showSection('mision')">Misión</button>
+    <button onclick="showSection('comparativo')">Cuadro Comparativo</button>
+    <button onclick="showSection('teorico')">Marco Teórico</button>
+    <button onclick="showSection('ecologico')">Descripción Ecológica</button>
+    <button onclick="showSection('metodologia')">Metodología</button>
+    <button onclick="showSection('impacto')">Impacto</button>
+    <button onclick="showSection('referencias')">Referencias</button>
+    <button onclick="showSection('equipo')">Equipo</button>
+  </nav>
+
+  <div id="section-content" data-current="plataforma" style="max-width:800px;text-align:center;z-index:10;padding:20px;background-color:rgba(0,0,0,0.7);border-radius:15px;">
+        </div>
+
+  <div class="jwst-grid"></div>
+</div>
+
+<div id="main-container">
+  <div id="controls-panel">
+    <h2>Monitoreo Apícola</h2>
+    <div class="widget">
+      <h4>1. Índice de Riesgo (MLP)</h4>
+      <p>Selecciona una zona en el mapa (Rectángulo) para iniciar el análisis.</p>
+      <div class="legend-item"><span class="risk-color-box" style="background-color:#28a745;"></span>Verde: Saludable</div>
+      <div class="legend-item"><span class="risk-color-box" style="background-color:#ffc107;"></span>Amarillo: Moderado</div>
+      <div class="legend-item"><span class="risk-color-box" style="background-color:#dc3545;"></span>Rojo: Crítico</div>
+    </div>
+    
+        <div class="widget">
+      <h4>3. Acción Local y Validación</h4>
+      <button onclick="showValidationPopup(null, map.getCenter())">Validar Zona (Subir Foto)</button>
+    </div>
+  </div>
+  <div id="map-container"><div id="map" style="height:100%;"></div></div>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script src="https://unpkg.com/h3-js@3.7.2/dist/h3-js.umd.js"></script>
+<script src="platform.js"></script>
+
+<script>
+// Lógica de animación de la grilla
+window.onload = function() {
+  const grid = document.querySelector('.jwst-grid');
+  for (let i = 0; i < 200; i++) {
+    const hex = document.createElement('div');
+    hex.className = 'hex-unit';
+    hex.style.animationDelay = `${Math.random() * 5}s`;
+    grid.appendChild(hex);
+  }
+  // Mostrar el contenido de la plataforma al cargar (Usando variable global 'currentLanguage' de platform.js)
+  showSection('plataforma');
+};
+
+// --- Lógica de Contenido para Navegación (Ahora bilingüe) ---
+function showSection(name) {
+  const contentDiv = document.getElementById('section-content');
+  // Guardar la sección actual
+  contentDiv.dataset.current = name;
+  
+  const lang = window.currentLanguage || 'es'; // Usar la variable de platform.js
+
+  // Restablecer estilos para contenido de texto
+  contentDiv.style.textAlign = 'left';
+  contentDiv.style.maxWidth = '1000px';
+  contentDiv.style.padding = '20px';
+
+  let title = name.replace('_', ' ').toUpperCase();
+  let contentHTML = '';
+
+  // --- Contenido BILINGÜE: Plataforma ---
+  if (name === 'plataforma') {
+    contentDiv.style.textAlign = 'center';
+    contentDiv.style.maxWidth = '800px';
+    title = "Bees in Space 🛰️";
+    contentHTML = `
+      <h1 style="color:#ffc300;">🐝 ${title}</h1>
+      <h2 style="color:#ffc300;">${lang === 'es' ? 'Salvando Abejas con Datos Satelitales y Geometría Hexagonal' : 'Saving Bees with Satellite Data and Hexagonal Geometry'}</h2>
+      <p style="text-align:center;">${lang === 'es' ? 'Plataforma para la conservación de polinizadores usando datos satelitales de la NASA.' : 'Platform for pollinator conservation using NASA satellite data.'}</p>
+      <button onclick="enterPlatform()">${lang === 'es' ? 'Entrar a la Plataforma' : 'Enter Platform'}</button>
+    `;
+  } 
+  // --- Contenido BILINGÜE: Misión ---
+  else if (name === 'mision') {
+    const missionEs = `
+      <h3>Español</h3>
+      <p>La disminución de las poblaciones de abejas está estrechamente vinculada al cambio climático y la contaminación ambiental, factores que alteran la temperatura, la humedad, la vegetación y la floración, reduciendo su supervivencia y distribución (Soroye et al., 2020; Zhang et al., 2020; Ziska et al., 2020; Descamps et al., 2021). El análisis de datos satelitales (MODIS, GEDI, SMAP, Sentinel-2, Landsat 5, 8 y 9) en el sector Quichipata-Tunamocco (Ayacucho, Perú) evidencia una **pérdida significativa de hábitats aptos para abejas entre 1990 y 2022**, con señales de recuperación parcial en 2025.</p>
+      <p>Aunque la regeneración es visible (Landsat 9, Agosto 2025), los impactos acumulados pueden ser irreversibles, comprometiendo la polinización. Sin embargo, el caso de Quichipata resalta la **resiliencia comunitaria**: los agricultores están promoviendo la reforestación y cultivos amigables con polinizadores, acciones que restauran áreas degradadas y aseguran la sostenibilidad rural bajo un marco de **economía circular**.</p>
+    `;
+    const missionEn = `
+      <h3>English</h3>
+      <p>The decline of bee populations is closely linked to climate change and environmental pollution, factors that alter temperature, humidity, vegetation, and flowering, thereby reducing their survival and distribution (Soroye et al., 2020; Zhang et al., 2020; Ziska et al., 2020; Descamps et al., 2021). Satellite data analysis (MODIS, GEDI, SMAP, Sentinel-2, Landsat 5, 8, and 9) in the Quichipata-Tunamocco sector (Ayacucho, Peru) shows a **significant loss of suitable habitats for bees between 1990 and 2022**, with signs of partial recovery in 2025.</p>
+      <p>Although regeneration is visible (Landsat 9, August 2025), the accumulated impacts may be irreversible, compromising pollination. However, the case of Quichipata highlights **community resilience**: farmers are promoting reforestation and pollinator-friendly crops, actions that restore degraded areas and ensure rural sustainability under a **circular economy** framework.</p>
+    `;
+    contentHTML = `
+      <h2 style="color:#ffc300;">${lang === 'es' ? 'MISIÓN' : 'MISSION'}</h2>
+      ${lang === 'es' ? missionEs + missionEn : missionEn + missionEs}
+    `;
+  }
+  // --- Contenido Cuadro Comparativo ---
+  else if (name === 'comparativo') {
+    contentHTML = `
+      <h2 style="color:#ffc300;">${lang === 'es' ? 'CUADRO COMPARATIVO' : 'COMPARATIVE TABLE'}</h2>
+      <p>${lang === 'es' ? 'Población de abejas y variables ambientales (NASA data)' : 'Bee population and environmental variables (NASA data)'}</p>
+      <table class="content-table">
+        <thead>
+          <tr>
+            <th>${lang === 'es' ? 'Variable' : 'Variable'}</th>
+            <th>${lang === 'es' ? 'Impacto en la población de abejas' : 'Impact on bee population'}</th>
+            <th>${lang === 'es' ? 'Satélite / Fuente NASA' : 'Satellite / NASA Source'}</th>
+            <th>${lang === 'es' ? 'Evidencia científica (últimos 5 años)' : 'Scientific Evidence (last 5 years)'}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>${lang === 'es' ? 'Vegetación' : 'Vegetation'}</td><td>${lang === 'es' ? 'Menor cobertura vegetal reduce hábitats y recursos florales, limitando alimento y refugio para abejas.' : 'Lower vegetation cover reduces habitats and floral resources, limiting food and shelter for bees.'}</td><td>NASA Earthdata MODIS vegetación índice, Earthdata Search Portal, USGS Earth Explorer – Sentinel-2</td><td>Zhang et al. (2020) mostraron reducción de vegetación/floración en paisajes agrícolas, afectando polinizadores.</td></tr>
+          <tr><td>${lang === 'es' ? 'Floración' : 'Flowering'}</td><td>${lang === 'es' ? 'La pérdida o desincronización de floración disminuye néctar y polen disponibles, reduciendo colonias y visitas.' : 'Loss or desynchronization of flowering reduces available nectar and pollen, reducing colonies and visits.'}</td><td>MODIS Phenology MCD12Q2</td><td>Ziska et al. (2020) evidenciaron que el cambio climático reduce la floración y recursos florales para abejas.</td></tr>
+          <tr><td>${lang === 'es' ? 'Humedad' : 'Humidity'}</td><td>${lang === 'es' ? 'El estrés hídrico en plantas reduce cantidad y calidad de flores, afectando la dieta de abejas.' : 'Water stress in plants reduces quantity and quality of flowers, affecting bee diet.'}</td><td>NASA LP DAAC – ECOSTRESS, Earthdata Search – ECOSTRESS</td><td>Descamps et al. (2021) confirmaron que sequías reducen visitas de abejas en cultivos.</td></tr>
+          <tr><td>${lang === 'es' ? 'Temperatura' : 'Temperature'}</td><td>${lang === 'es' ? 'Olas de calor y extremos térmicos desincronizan polinización y reducen la supervivencia de abejas.' : 'Heat waves and thermal extremes desynchronize pollination and reduce bee survival.'}</td><td>MODIS LST (Land Surface Temperature), GEDI (Global Ecosystem Dynamics Investigation)</td><td>Soroye et al. (2020) demostraron que el cambio climático y calor extremo reducen la distribución de abejas.</td></tr>
+        </tbody>
+      </table>
+    `;
+  }
+  // --- Contenido Marco Teórico ---
+  else if (name === 'teorico') {
+    contentHTML = `
+      <h2 style="color:#ffc300;">${lang === 'es' ? 'MARCO TEÓRICO' : 'THEORETICAL FRAMEWORK'}</h2>
+      <p>${lang === 'es' ? 'Informe Científico Multidisciplinario: **Abejas como Bioindicadores de la Salud Ecosistémica**' : 'Multidisciplinary Scientific Report: **Bees as Bioindicators of Ecosystem Health**'}</p>
+      <p>${lang === 'es' ? 'Las abejas (orden Hymenoptera) son organismos clave en los ecosistemas, no solo por el servicio ecológico de la polinización, sino también por su sensibilidad a las perturbaciones. Su fisiología, comportamiento y los productos de la colmena funcionan como una "caja negra" que refleja el estado de la calidad ambiental.' : 'Bees (order Hymenoptera) are key organisms in ecosystems, not only for the ecological service of pollination, but also for their sensitivity to disturbances. Their physiology, behavior, and hive products function as a "black box" that reflects the state of environmental quality.'}</p>
+      <h3>${lang === 'es' ? 'Especies de Abejas Bioindicadoras Clave' : 'Key Bioindicator Bee Species'}</h3>
+      <table class="content-table">
+        <thead><tr><th>${lang === 'es' ? 'Grupo' : 'Group'}</th><th>${lang === 'es' ? 'Especie' : 'Species'}</th><th>${lang === 'es' ? 'Ecosistema' : 'Ecosystem'}</th><th>${lang === 'es' ? 'Sensibilidad' : 'Sensitivity'}</th><th>${lang === 'es' ? 'Relevancia' : 'Relevance'}</th></tr></thead>
+        <tbody>
+          <tr><td>Euglossini</td><td>*Euglossa spp.*</td><td>${lang === 'es' ? 'Bosques Tropicales' : 'Tropical Forests'}</td><td>${lang === 'es' ? 'Pérdida de hábitat' : 'Habitat loss'}</td><td>${lang === 'es' ? 'Indicadoras de la conservación del bosque.' : 'Indicators of forest conservation.'}</td></tr>
+          <tr><td>Meliponini</td><td>*Scaptotrigona mexicana*</td><td>${lang === 'es' ? 'Agroecosistemas' : 'Agroecosystems'}</td><td>${lang === 'es' ? 'Contaminación por plaguicidas' : 'Pesticide contamination'}</td><td>${lang === 'es' ? 'El polen y la miel revelan agroquímicos.' : 'Pollen and honey reveal agrochemicals.'}</td></tr>
+          <tr><td>Bombini</td><td>*Bombus spp.*</td><td>${lang === 'es' ? 'Alta Montaña' : 'High Mountain'}</td><td>${lang === 'es' ? 'Cambio Climático' : 'Climate Change'}</td><td>${lang === 'es' ? 'Su rango altitudinal indica el impacto del calentamiento.' : 'Their altitudinal range indicates warming impact.'}</td></tr>
+          <tr><td>Halictidae</td><td>*Halictus ligatus*</td><td>${lang === 'es' ? 'Áreas Perturbadas' : 'Disturbed Areas'}</td><td>${lang === 'es' ? 'Perturbaciones generalizadas' : 'Generalized disturbances'}</td><td>${lang === 'es' ? 'Alta abundancia relativa indica degradación del hábitat.' : 'High relative abundance indicates habitat degradation.'}</td></tr>
+        </tbody>
+      </table>
+      <h3>${lang === 'es' ? 'Métodos de Biomonitoreo Químico' : 'Chemical Biomonitoring Methods'}</h3>
+      <ul>
+        <li>**${lang === 'es' ? 'Análisis de Matrices de la Colmena' : 'Hive Matrix Analysis'}:** ${lang === 'es' ? 'Se procesan miel, polen y cera mediante Cromatografía (LC-MS/MS, GC-MS) para medir pesticidas y metales pesados.' : 'Honey, pollen, and wax are processed using Chromatography (LC-MS/MS, GC-MS) to measure pesticides and heavy metals.'}</li>
+        <li>**${lang === 'es' ? 'Estaciones de Biomonitoreo Gemelas' : 'Twin Biomonitoring Stations'}:** ${lang === 'es' ? 'Colmenas idénticas en área de monitoreo y control para comparar la contaminación bioacumulada.' : 'Identical hives in monitoring and control areas to compare bioaccumulated contamination.'}</li>
+        <li>**${lang === 'es' ? 'Valor Indicador (InVal)' : 'Indicator Value (InVal)'}:** ${lang === 'es' ? 'Método estadístico para definir especies indicadoras robustas.' : 'Statistical method to define robust indicator species.'}</li>
+      </ul>
+    `;
+  }
+  // --- Contenido Descripción Ecológica ---
+  else if (name === 'ecologico') {
+    contentHTML = `
+      <h2 style="color:#ffc300;">${lang === 'es' ? 'DESCRIPCIÓN ECOLÓGICA' : 'ECOLOGICAL DESCRIPTION'}</h2>
+      <p>${lang === 'es' ? 'Existen aproximadamente 20,000 especies de abejas en el mundo. Dentro de estas, se encuentran grupos clave como las abejas melíferas (género Apis), abejas solitarias y abejas sin aguijón.' : 'There are approximately 20,000 bee species worldwide. Key groups include honey bees (genus Apis), solitary bees, and stingless bees.'}</p>
+      <h3>${lang === 'es' ? 'Abejas de las Orquídeas (Euglossini)' : 'Orchid Bees (Euglossini)'}</h3>
+      <p>${lang === 'es' ? 'Su riqueza y composición son altamente sensibles a la fragmentación. **Indicador de Integridad del Bosque:** Una baja diversidad total y pocas especies generalistas es un bioindicador de perturbación.' : 'Their richness and composition are highly sensitive to fragmentation. **Forest Integrity Indicator:** Low total diversity and few generalist species is a bioindicator of disturbance.'}</p>
+      <h3>${lang === 'es' ? 'Abejas sin Aguijón (Meliponini)' : 'Stingless Bees (Meliponini)'}</h3>
+      <p>${lang === 'es' ? 'Su valor bioindicador radica en el análisis de las matrices de la colmena. **Biomonitoreo de Pesticidas:** Se ha detectado la presencia de neonicotinoides y organoclorados en polen y miel.' : 'Their bioindicator value lies in the analysis of the hive matrices. **Pesticide Biomonitoring:** The presence of neonicotinoids and organochlorines has been detected in pollen and honey.'}</p>
+      <h3>${lang === 'es' ? 'Abejorros (Bombini) y Cambio Climático' : 'Bumblebees (Bombini) and Climate Change'}</h3>
+      <p>${lang === 'es' ? 'Grupo focal para el monitoreo del cambio climático. **Indicador de Sensibilidad Climática:** Las variaciones en la distribución altitudinal y la disminución poblacional son un bioindicador del aumento de las temperaturas medias.' : 'Focal group for climate change monitoring. **Climate Sensitivity Indicator:** Variations in altitudinal distribution and population decline are a bioindicator of increasing average temperatures.'}</p>
+    `;
+  }
+  // --- Contenido Metodología (Solo Español para simplificar) ---
+  else if (name === 'metodologia') {
+    contentHTML = `
+      <h2 style="color:#ffc300;">METODOLOGÍA</h2>
+      <p>El monitoreo de abejas como bioindicadores requiere un enfoque que combina la captura y el análisis químico-comportamental.</p>
+      <h3>1. Monitoreo de Riqueza y Diversidad (Índice de Salud Ecosistémica)</h3>
+      <table class="content-table">
+        <thead><tr><th>Método de Monitoreo</th><th>Especies Objetivo</th><th>Parámetros Medidos</th><th>Aplicación</th></tr></thead>
+        <tbody>
+          <tr><td>Trampas de Atrayente Artificial</td><td>Euglossini</td><td>Riqueza de especies, abundancia</td><td>Evaluación del estado de conservación en bosques (Rojas et al., 2022).</td></tr>
+          <tr><td>Red Entomológica</td><td>Bombini, Halictidae</td><td>Riqueza, abundancia relativa</td><td>Estimación general de la biodiversidad de polinizadores.</td></tr>
+        </tbody>
+      </table>
+    `;
+  }
+  // --- Contenido Impacto (Solo Español para simplificar) ---
+  else if (name === 'impacto') {
+    contentHTML = `
+      <h2 style="color:#ffc300;">IMPACTO</h2>
+      <h3>Impacto en la Conservación Ambiental</h3>
+      <ul>
+        <li>**Detección Temprana de Contaminantes:** El análisis de polen permite identificar plaguicidas (neonicotinoides y glifosato) antes que en otros componentes.</li>
+        <li>**Evaluación de Estrategias de Restauración:** El monitoreo de la riqueza de abejas silvestres evalúa la eficiencia de proyectos de restauración ecológica.</li>
+      </ul>
+    `;
+  }
+  // --- Contenido Referencias (Solo Español) ---
+  else if (name === 'referencias') {
+    contentHTML = `
+      <h2 style="color:#ffc300;">REFERENCIAS</h2>
+      <ul>
+        <li>Correa Benítez, A. (2021). Abejas, indicadores de la salud del planeta. Boletín UNAM-DGCS-426.</li>
+        <li>De Souza, J. M. et al. (2015). Neonicotinoid insecticide residues in pollen collected by *Scaptotrigona aff. depilis*. *Environ. Sci. Pollut. Res.*</li>
+        <li>La Colmena de Teo. (s.f.). Las abejas como bioindicadoras.</li>
+        <li>Meléndez Ramírez, V. et al. (2014). Abejas como bioindicadores de perturbaciones. En *Bioindicadores: Guardianes de nuestro futuro ambiental*.</li>
+        <li>Rojas, B. et al. (2022). Abejas de las orquídeas como bioindicadores del estado de conservación de un bosque. *Manglar*.</li>
+        <li>Ruiz-Toledo, J. et al. (2018). Contaminantes en colmenas de *Scaptotrigona mexicana* y su potencial como bioindicador. *Ciencias Agrícolas*.</li>
+        <li>SciELO Colombia. (s.f.). Abejas silvestres como estrategia de monitoreo de restauración ecológica.</li>
+      </ul>
+    `;
+  }
+  // --- Contenido Equipo (Solo Español) ---
+  else if (name === 'equipo') {
+    contentDiv.style.textAlign = 'center';
+    contentDiv.style.maxWidth = '800px';
+    contentHTML = `
+      <h2 style="color:#ffc300;">${lang === 'es' ? 'EQUIPO' : 'TEAM'} 🇵🇪</h2>
+      <ul style="list-style-type: none; padding: 0;">
+        <li>**Galia Sintia Gálvez Retamozo** (@casagaiaperu)</li>
+        <li>**Erick Gavino Paucar** (@erickga)</li>
+        <li>**William Hidalgo** (@willhidalgo)</li>
+        <li>**Luis Gustavo Yampufé Román** (@antiqu4rk)</li>
+        <li>**Elizabeth Cristina Román Ibañez** (@oriana_07_mia_0)</li>
+        <li>**Irvin Alberto Quesquén Espinoza** (@irvin_quesquen)</li>
+      </ul>
+      <p>📍 Perú</p>
+    `;
+  }
+
+  contentDiv.innerHTML = contentHTML;
+}
+</script>
+</body>
+</html>

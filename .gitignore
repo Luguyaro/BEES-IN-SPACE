@@ -1,0 +1,12 @@
+# Entorno virtual
+.venv/
+env/
+
+# Archivos Python grandes o temporales
+*.pyc
+__pycache__/
+
+# Archivos de modelos o datos grandes, si no usas Git LFS
+# Si usas Git LFS, no ignores estos, solo rastrealos.
+*.h5
+*.joblib
